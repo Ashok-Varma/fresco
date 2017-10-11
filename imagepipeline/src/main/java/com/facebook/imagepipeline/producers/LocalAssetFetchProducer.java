@@ -9,22 +9,20 @@
 
 package com.facebook.imagepipeline.producers;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.concurrent.Executor;
-
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
-
-import com.facebook.common.internal.VisibleForTesting;
-import com.facebook.imagepipeline.memory.PooledByteBufferFactory;
+import com.facebook.common.memory.PooledByteBufferFactory;
+import com.facebook.imagepipeline.image.EncodedImage;
 import com.facebook.imagepipeline.request.ImageRequest;
+import java.io.IOException;
+import java.util.concurrent.Executor;
 
 /**
  * Executes a local fetch from an asset.
  */
 public class LocalAssetFetchProducer extends LocalFetchProducer {
-  @VisibleForTesting static final String PRODUCER_NAME = "LocalAssetFetchProducer";
+
+  public static final String PRODUCER_NAME = "LocalAssetFetchProducer";
 
   private final AssetManager mAssetManager;
 
@@ -37,12 +35,13 @@ public class LocalAssetFetchProducer extends LocalFetchProducer {
   }
 
   @Override
-  protected InputStream getInputStream(ImageRequest imageRequest) throws IOException {
-    return mAssetManager.open(getAssetName(imageRequest), AssetManager.ACCESS_STREAMING);
+  protected EncodedImage getEncodedImage(ImageRequest imageRequest) throws IOException {
+    return getEncodedImage(
+        mAssetManager.open(getAssetName(imageRequest), AssetManager.ACCESS_STREAMING),
+        getLength(imageRequest));
   }
 
-  @Override
-  protected int getLength(ImageRequest imageRequest) {
+  private int getLength(ImageRequest imageRequest) {
     AssetFileDescriptor fd = null;
     try {
       fd = mAssetManager.openFd(getAssetName(imageRequest));

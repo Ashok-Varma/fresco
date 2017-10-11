@@ -9,9 +9,8 @@
 
 package com.facebook.datasource;
 
-import javax.annotation.Nullable;
-
 import java.util.concurrent.Executor;
+import javax.annotation.Nullable;
 
 /**
  * An alternative to Java Futures for the image pipeline.
@@ -29,7 +28,7 @@ public interface DataSource<T> {
   /**
    * @return true if the data source is closed, false otherwise
    */
-  public boolean isClosed();
+  boolean isClosed();
 
   /**
    * The most recent result of the asynchronous computation.

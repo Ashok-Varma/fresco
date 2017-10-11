@@ -9,14 +9,12 @@
 
 package com.facebook.drawee.controller;
 
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import android.graphics.drawable.Animatable;
 import android.util.Log;
+import java.util.ArrayList;
+import java.util.List;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * Listener that forwards controller events to multiple listeners.
@@ -71,8 +69,8 @@ public class ForwardingControllerListener<INFO> implements ControllerListener<IN
   public synchronized void onSubmit(String id, Object callerContext) {
     final int numberOfListeners = mListeners.size();
     for (int i = 0; i < numberOfListeners; ++i) {
-      ControllerListener<? super INFO> listener = mListeners.get(i);
       try {
+        ControllerListener<? super INFO> listener = mListeners.get(i);
         listener.onSubmit(id, callerContext);
       } catch (Exception exception) {
         // Don't punish the other listeners if we're given a bad one.
@@ -88,8 +86,8 @@ public class ForwardingControllerListener<INFO> implements ControllerListener<IN
       @Nullable Animatable animatable) {
     final int numberOfListeners = mListeners.size();
     for (int i = 0; i < numberOfListeners; ++i) {
-      ControllerListener<? super INFO> listener = mListeners.get(i);
       try {
+        ControllerListener<? super INFO> listener = mListeners.get(i);
         listener.onFinalImageSet(id, imageInfo, animatable);
       } catch (Exception exception) {
         // Don't punish the other listeners if we're given a bad one.
@@ -102,8 +100,8 @@ public class ForwardingControllerListener<INFO> implements ControllerListener<IN
   public void onIntermediateImageSet(String id, @Nullable INFO imageInfo) {
     final int numberOfListeners = mListeners.size();
     for (int i = 0; i < numberOfListeners; ++i) {
-      ControllerListener<? super INFO> listener = mListeners.get(i);
       try {
+        ControllerListener<? super INFO> listener = mListeners.get(i);
         listener.onIntermediateImageSet(id, imageInfo);
       } catch (Exception exception) {
         // Don't punish the other listeners if we're given a bad one.
@@ -116,8 +114,8 @@ public class ForwardingControllerListener<INFO> implements ControllerListener<IN
   public void onIntermediateImageFailed(String id, Throwable throwable) {
     final int numberOfListeners = mListeners.size();
     for (int i = 0; i < numberOfListeners; ++i) {
-      ControllerListener<? super INFO> listener = mListeners.get(i);
       try {
+        ControllerListener<? super INFO> listener = mListeners.get(i);
         listener.onIntermediateImageFailed(id, throwable);
       } catch (Exception exception) {
         // Don't punish the other listeners if we're given a bad one.
@@ -130,8 +128,8 @@ public class ForwardingControllerListener<INFO> implements ControllerListener<IN
   public synchronized void onFailure(String id, Throwable throwable) {
     final int numberOfListeners = mListeners.size();
     for (int i = 0; i < numberOfListeners; ++i) {
-      ControllerListener<? super INFO> listener = mListeners.get(i);
       try {
+        ControllerListener<? super INFO> listener = mListeners.get(i);
         listener.onFailure(id, throwable);
       } catch (Exception exception) {
         // Don't punish the other listeners if we're given a bad one.
@@ -144,8 +142,8 @@ public class ForwardingControllerListener<INFO> implements ControllerListener<IN
   public synchronized void onRelease(String id) {
     final int numberOfListeners = mListeners.size();
     for (int i = 0; i < numberOfListeners; ++i) {
-      ControllerListener<? super INFO> listener = mListeners.get(i);
       try {
+        ControllerListener<? super INFO> listener = mListeners.get(i);
         listener.onRelease(id);
       } catch (Exception exception) {
         // Don't punish the other listeners if we're given a bad one.

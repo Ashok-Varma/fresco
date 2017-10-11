@@ -12,10 +12,8 @@ package com.facebook.imagepipeline.backends.okhttp;
 import android.net.Uri;
 import android.os.Looper;
 import android.os.SystemClock;
-
 import com.facebook.common.logging.FLog;
 import com.facebook.imagepipeline.image.EncodedImage;
-import com.facebook.imagepipeline.memory.PooledByteBuffer;
 import com.facebook.imagepipeline.producers.BaseNetworkFetcher;
 import com.facebook.imagepipeline.producers.BaseProducerContextCallbacks;
 import com.facebook.imagepipeline.producers.Consumer;
@@ -27,7 +25,6 @@ import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 import com.squareup.okhttp.ResponseBody;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +32,9 @@ import java.util.concurrent.Executor;
 
 /**
  * Network fetcher that uses OkHttp as a backend.
+ *
+ * @deprecated replaced with {@code
+ * com.facebook.imagepipeline.backends.okhttp3.OkHttpNetworkFetcher}.
  */
 public class OkHttpNetworkFetcher extends
     BaseNetworkFetcher<OkHttpNetworkFetcher.OkHttpNetworkFetchState> {
@@ -78,13 +78,27 @@ public class OkHttpNetworkFetcher extends
 
   @Override
   public void fetch(final OkHttpNetworkFetchState fetchState, final Callback callback) {
-    fetchState.submitTime = SystemClock.elapsedRealtime();
+    fetchState.submitTime = SystemClock.uptimeMillis();
     final Uri uri = fetchState.getUri();
-    final Request request = new Request.Builder()
+
+    try {
+      Request request = new Request.Builder()
         .cacheControl(new CacheControl.Builder().noStore().build())
         .url(uri.toString())
         .get()
         .build();
+      fetchWithRequest(fetchState, callback, request);
+    } catch (Exception e) {
+      // handle error while creating the request
+      callback.onFailure(e);
+    }
+  }
+
+  protected void fetchWithRequest(
+          final OkHttpNetworkFetchState fetchState,
+          final Callback callback,
+          final Request request) {
+
     final Call call = mOkHttpClient.newCall(request);
 
     fetchState.getContext().addCallbacks(
@@ -107,21 +121,29 @@ public class OkHttpNetworkFetcher extends
         new com.squareup.okhttp.Callback() {
           @Override
           public void onResponse(Response response) {
-            fetchState.responseTime = SystemClock.elapsedRealtime();
+            fetchState.responseTime = SystemClock.uptimeMillis();
             final ResponseBody body = response.body();
             try {
+              if (!response.isSuccessful()) {
+                handleException(
+                        call,
+                        new IOException("Unexpected HTTP code " + response),
+                        callback);
+                return;
+              }
+
               long contentLength = body.contentLength();
               if (contentLength < 0) {
                 contentLength = 0;
               }
               callback.onResponse(body.byteStream(), (int) contentLength);
-            } catch (IOException ioe) {
-              handleException(call, ioe, callback);
+            } catch (Exception e) {
+              handleException(call, e, callback);
             } finally {
               try {
                 body.close();
-              } catch (IOException ioe) {
-                FLog.w(TAG, "Exception when closing response body", ioe);
+              } catch (Exception e) {
+                FLog.w(TAG, "Exception when closing response body", e);
               }
             }
           }
@@ -135,7 +157,7 @@ public class OkHttpNetworkFetcher extends
 
   @Override
   public void onFetchCompletion(OkHttpNetworkFetchState fetchState, int byteSize) {
-    fetchState.fetchCompleteTime = SystemClock.elapsedRealtime();
+    fetchState.fetchCompleteTime = SystemClock.uptimeMillis();
   }
 
   @Override
@@ -149,17 +171,17 @@ public class OkHttpNetworkFetcher extends
   }
 
   /**
-   * Handles IOExceptions.
+   * Handles exceptions.
    *
    * <p> OkHttp notifies callers of cancellations via an IOException. If IOException is caught
    * after request cancellation, then the exception is interpreted as successful cancellation
    * and onCancellation is called. Otherwise onFailure is called.
    */
-  private void handleException(final Call call, final IOException ioe, final Callback callback) {
+  private void handleException(final Call call, final Exception e, final Callback callback) {
     if (call.isCanceled()) {
       callback.onCancellation();
     } else {
-      callback.onFailure(ioe);
+      callback.onFailure(e);
     }
   }
 }

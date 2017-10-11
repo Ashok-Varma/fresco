@@ -17,9 +17,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.widget.ImageView;
-
 import com.facebook.samples.comparison.Drawables;
-import com.facebook.common.internal.Preconditions;
 
 /**
  * {@link ImageView} that notifies its instance of {@link Instrumentation} whenever an image request
@@ -52,7 +50,9 @@ public class InstrumentedImageView extends ImageView implements Instrumented {
 
   @Override
   public void setImageDrawable(final Drawable drawable) {
-    Preconditions.checkNotNull(drawable);
+    if (drawable == null) {// AQuery preset drawable to be null if not found in cache
+      return;
+    }
     if (drawable == Drawables.sPlaceholderDrawable) {
       // ignore
     } else if (drawable == Drawables.sErrorDrawable) {

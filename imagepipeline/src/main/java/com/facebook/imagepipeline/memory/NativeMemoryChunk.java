@@ -9,22 +9,19 @@
 
 package com.facebook.imagepipeline.memory;
 
-import java.io.Closeable;
-
 import android.util.Log;
-
+import com.facebook.common.internal.DoNotStrip;
 import com.facebook.common.internal.Preconditions;
 import com.facebook.common.internal.VisibleForTesting;
-import com.facebook.common.internal.DoNotStrip;
-import com.facebook.common.soloader.SoLoaderShim;
-
+import com.facebook.imagepipeline.nativecode.ImagePipelineNativeLoader;
+import java.io.Closeable;
 
 /**
  * Wrapper around chunk of native memory.
  *
  * <p> This class uses JNI to obtain pointer to native memory and read/write data from/to it.
  *
- * <p> Native code used by this class is shipped as part of libimagepipeline_memory.so
+ * <p> Native code used by this class is shipped as part of libimagepipeline.so
  *
  * @ThreadSafe
  */
@@ -33,7 +30,7 @@ public class NativeMemoryChunk implements Closeable {
   private static final String TAG = "NativeMemoryChunk";
 
   static {
-    SoLoaderShim.loadLibrary("memchunk");
+    ImagePipelineNativeLoader.load();
   }
 
   /**

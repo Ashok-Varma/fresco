@@ -9,21 +9,20 @@
 
 package com.facebook.common.executors;
 
+import android.os.Handler;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import android.os.Handler;
-
-import org.robolectric.RobolectricTestRunner;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.Robolectric;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.Shadows;
+import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
 
 @RunWith(RobolectricTestRunner.class)
+@Config(manifest= Config.NONE)
 public class HandlerExecutorServiceImplTest {
 
   private AtomicInteger mCounter = new AtomicInteger();
@@ -56,7 +55,7 @@ public class HandlerExecutorServiceImplTest {
   public void testDelay() {
     mExecutorService.schedule(mIncrementCounterRunnable, 30, TimeUnit.SECONDS);
     Assert.assertEquals(0, mCounter.get());
-    Robolectric.shadowOf(ShadowLooper.getMainLooper()).getScheduler().advanceBy(30 * 1000);
+    Shadows.shadowOf(ShadowLooper.getMainLooper()).getScheduler().advanceBy(30 * 1000);
     Assert.assertEquals(1, mCounter.get());
   }
 }

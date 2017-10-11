@@ -11,6 +11,7 @@ package com.facebook.drawee.view;
 
 import android.view.View;
 import android.view.ViewGroup;
+import javax.annotation.Nullable;
 
 /**
  * A utility class that performs measuring based on the desired aspect ratio.
@@ -28,7 +29,8 @@ public class AspectRatioMeasure {
   /**
    * Updates the given measure spec with respect to the aspect ratio.
    *
-   * <p>Note: Measure spec is not changed if the aspect ratio is not greater than zero.
+   * <p>Note: Measure spec is not changed if the aspect ratio is not greater than zero or if
+   * layoutParams is null.
    *
    * <p>Measure spec of the layout dimension (width or height) specified as "0dp" is updated
    * to match the measure spec of the other dimension adjusted by the aspect ratio. Exactly one
@@ -50,10 +52,10 @@ public class AspectRatioMeasure {
   public static void updateMeasureSpec(
       Spec spec,
       float aspectRatio,
-      ViewGroup.LayoutParams layoutParams,
+      @Nullable ViewGroup.LayoutParams layoutParams,
       int widthPadding,
       int heightPadding) {
-    if (aspectRatio <= 0) {
+    if (aspectRatio <= 0 || layoutParams == null) {
       return;
     }
     if (shouldAdjust(layoutParams.height)) {

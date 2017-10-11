@@ -9,15 +9,18 @@
 
 package com.facebook.common.time;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 /**
  * Interface for getting the current time.
  */
+@ThreadSafe
 public interface Clock {
 
   /**
    * The maximum time.
    */
-  public static final long MAX_TIME = Long.MAX_VALUE;
+  long MAX_TIME = Long.MAX_VALUE;
 
   /**
    * Gets the current time in milliseconds.

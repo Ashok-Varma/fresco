@@ -9,14 +9,12 @@
 
 package com.facebook.drawee.drawable;
 
-import java.util.Arrays;
-
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
-
 import com.facebook.common.internal.Preconditions;
 import com.facebook.common.internal.VisibleForTesting;
+import java.util.Arrays;
 
 /**
  * A drawable that fades to the specific layer.
@@ -299,7 +297,7 @@ public class FadeDrawable extends ArrayDrawable {
   }
 
   private void drawDrawableWithAlpha(Canvas canvas, Drawable drawable, int alpha) {
-    if (alpha > 0) {
+    if (drawable != null && alpha > 0) {
       mPreventInvalidateCount++;
       drawable.mutate().setAlpha(alpha);
       mPreventInvalidateCount--;

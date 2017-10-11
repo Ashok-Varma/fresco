@@ -8,19 +8,17 @@
  */
 package com.facebook.drawee.gestures;
 
-import android.view.MotionEvent;
-import android.view.ViewConfiguration;
-
-import org.robolectric.RobolectricTestRunner;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.robolectric.Robolectric;
-
 import static android.view.MotionEvent.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 
 /**
  * Tests for {@link GestureDetector}
@@ -37,10 +35,10 @@ public class GestureDetectorTest {
   @Before
   public void setup() {
     mClickListener = mock(GestureDetector.ClickListener.class);
-    mViewConfiguration = ViewConfiguration.get(Robolectric.application);
+    mViewConfiguration = ViewConfiguration.get(RuntimeEnvironment.application);
     mScaledTouchSlop = mViewConfiguration.getScaledTouchSlop();
     mLongPressTimeout = mViewConfiguration.getLongPressTimeout();
-    mGestureDetector = new GestureDetector(Robolectric.application);
+    mGestureDetector = new GestureDetector(RuntimeEnvironment.application);
     mGestureDetector.setClickListener(mClickListener);
   }
 

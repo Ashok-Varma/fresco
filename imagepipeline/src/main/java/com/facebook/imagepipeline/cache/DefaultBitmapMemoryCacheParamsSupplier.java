@@ -11,7 +11,6 @@ package com.facebook.imagepipeline.cache;
 
 import android.app.ActivityManager;
 import android.os.Build;
-
 import com.facebook.common.internal.Supplier;
 import com.facebook.common.util.ByteConstants;
 
@@ -50,7 +49,7 @@ public class DefaultBitmapMemoryCacheParamsSupplier implements Supplier<MemoryCa
     } else {
       // We don't want to use more ashmem on Gingerbread for now, since it doesn't respond well to
       // native memory pressure (doesn't throw exceptions, crashes app, crashes phone)
-      if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.GINGERBREAD) {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.HONEYCOMB) {
         return 8 * ByteConstants.MB;
       } else {
         return maxMemory / 4;

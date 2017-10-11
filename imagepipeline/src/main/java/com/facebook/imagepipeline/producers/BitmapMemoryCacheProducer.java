@@ -11,10 +11,9 @@ package com.facebook.imagepipeline.producers;
 
 import com.facebook.cache.common.CacheKey;
 import com.facebook.common.internal.ImmutableMap;
-import com.facebook.common.internal.VisibleForTesting;
 import com.facebook.common.references.CloseableReference;
-import com.facebook.imagepipeline.cache.MemoryCache;
 import com.facebook.imagepipeline.cache.CacheKeyFactory;
+import com.facebook.imagepipeline.cache.MemoryCache;
 import com.facebook.imagepipeline.image.CloseableImage;
 import com.facebook.imagepipeline.image.QualityInfo;
 import com.facebook.imagepipeline.request.ImageRequest;
@@ -24,20 +23,20 @@ import com.facebook.imagepipeline.request.ImageRequest;
  */
 public class BitmapMemoryCacheProducer implements Producer<CloseableReference<CloseableImage>> {
 
-  @VisibleForTesting static final String PRODUCER_NAME = "BitmapMemoryCacheProducer";
-  @VisibleForTesting static final String VALUE_FOUND = "cached_value_found";
+  public static final String PRODUCER_NAME = "BitmapMemoryCacheProducer";
+  public static final String EXTRA_CACHED_VALUE_FOUND = ProducerConstants.EXTRA_CACHED_VALUE_FOUND;
 
   private final MemoryCache<CacheKey, CloseableImage> mMemoryCache;
   private final CacheKeyFactory mCacheKeyFactory;
-  private final Producer<CloseableReference<CloseableImage>> mNextProducer;
+  private final Producer<CloseableReference<CloseableImage>> mInputProducer;
 
   public BitmapMemoryCacheProducer(
       MemoryCache<CacheKey, CloseableImage> memoryCache,
       CacheKeyFactory cacheKeyFactory,
-      Producer<CloseableReference<CloseableImage>> nextProducer) {
+      Producer<CloseableReference<CloseableImage>> inputProducer) {
     mMemoryCache = memoryCache;
     mCacheKeyFactory = cacheKeyFactory;
-    mNextProducer = nextProducer;
+    mInputProducer = inputProducer;
   }
 
   @Override
@@ -49,7 +48,8 @@ public class BitmapMemoryCacheProducer implements Producer<CloseableReference<Cl
     final String requestId = producerContext.getId();
     listener.onProducerStart(requestId, getProducerName());
     final ImageRequest imageRequest = producerContext.getImageRequest();
-    final CacheKey cacheKey = mCacheKeyFactory.getBitmapCacheKey(imageRequest);
+    final Object callerContext = producerContext.getCallerContext();
+    final CacheKey cacheKey = mCacheKeyFactory.getBitmapCacheKey(imageRequest, callerContext);
 
     CloseableReference<CloseableImage> cachedReference = mMemoryCache.get(cacheKey);
 
@@ -59,10 +59,13 @@ public class BitmapMemoryCacheProducer implements Producer<CloseableReference<Cl
         listener.onProducerFinishWithSuccess(
             requestId,
             getProducerName(),
-            listener.requiresExtraMap(requestId) ? ImmutableMap.of(VALUE_FOUND, "true") : null);
+            listener.requiresExtraMap(requestId)
+                ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, "true")
+                : null);
+        listener.onUltimateProducerReached(requestId, getProducerName(), true);
         consumer.onProgressUpdate(1f);
       }
-      consumer.onNewResult(cachedReference, isFinal);
+      consumer.onNewResult(cachedReference, BaseConsumer.simpleStatusForIsLast(isFinal));
       cachedReference.close();
       if (isFinal) {
         return;
@@ -74,8 +77,11 @@ public class BitmapMemoryCacheProducer implements Producer<CloseableReference<Cl
       listener.onProducerFinishWithSuccess(
           requestId,
           getProducerName(),
-          listener.requiresExtraMap(requestId) ? ImmutableMap.of(VALUE_FOUND, "false") : null);
-      consumer.onNewResult(null, true);
+          listener.requiresExtraMap(requestId)
+              ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, "false")
+              : null);
+      listener.onUltimateProducerReached(requestId, getProducerName(), false);
+      consumer.onNewResult(null, Consumer.IS_LAST);
       return;
     }
 
@@ -83,8 +89,10 @@ public class BitmapMemoryCacheProducer implements Producer<CloseableReference<Cl
     listener.onProducerFinishWithSuccess(
         requestId,
         getProducerName(),
-        listener.requiresExtraMap(requestId) ? ImmutableMap.of(VALUE_FOUND, "false") : null);
-    mNextProducer.produceResults(wrappedConsumer, producerContext);
+        listener.requiresExtraMap(requestId)
+            ? ImmutableMap.of(EXTRA_CACHED_VALUE_FOUND, "false")
+            : null);
+    mInputProducer.produceResults(wrappedConsumer, producerContext);
   }
 
   protected Consumer<CloseableReference<CloseableImage>> wrapConsumer(
@@ -94,17 +102,20 @@ public class BitmapMemoryCacheProducer implements Producer<CloseableReference<Cl
         CloseableReference<CloseableImage>,
         CloseableReference<CloseableImage>>(consumer) {
       @Override
-      public void onNewResultImpl(CloseableReference<CloseableImage> newResult, boolean isLast) {
+      public void onNewResultImpl(
+          CloseableReference<CloseableImage> newResult,
+          @Status int status) {
+        final boolean isLast = isLast(status);
         // ignore invalid intermediate results and forward the null result if last
         if (newResult == null) {
           if (isLast) {
-            getConsumer().onNewResult(null, true);
+            getConsumer().onNewResult(null, status);
           }
           return;
         }
-        // stateful results cannot be cached and are just forwarded
-        if (newResult.get().isStateful()) {
-          getConsumer().onNewResult(newResult, isLast);
+        // stateful and partial results cannot be cached and are just forwarded
+        if (newResult.get().isStateful() || statusHasFlag(status, IS_PARTIAL_RESULT)) {
+          getConsumer().onNewResult(newResult, status);
           return;
         }
         // if the intermediate result is not of a better quality than the cached result,
@@ -116,7 +127,7 @@ public class BitmapMemoryCacheProducer implements Producer<CloseableReference<Cl
               QualityInfo newInfo = newResult.get().getQualityInfo();
               QualityInfo cachedInfo = currentCachedResult.get().getQualityInfo();
               if (cachedInfo.isOfFullQuality() || cachedInfo.getQuality() >= newInfo.getQuality()) {
-                getConsumer().onNewResult(currentCachedResult, false);
+                getConsumer().onNewResult(currentCachedResult, status);
                 return;
               }
             } finally {
@@ -132,7 +143,7 @@ public class BitmapMemoryCacheProducer implements Producer<CloseableReference<Cl
             getConsumer().onProgressUpdate(1f);
           }
           getConsumer().onNewResult(
-              (newCachedResult != null) ? newCachedResult : newResult, isLast);
+              (newCachedResult != null) ? newCachedResult : newResult, status);
         } finally {
           CloseableReference.closeSafely(newCachedResult);
         }

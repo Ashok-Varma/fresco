@@ -9,19 +9,9 @@
 
 package com.facebook.imagepipeline.memory;
 
-import javax.annotation.concurrent.GuardedBy;
-import javax.annotation.concurrent.NotThreadSafe;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import android.annotation.SuppressLint;
 import android.util.SparseArray;
 import android.util.SparseIntArray;
-
 import com.facebook.common.internal.Preconditions;
 import com.facebook.common.internal.Sets;
 import com.facebook.common.internal.Throwables;
@@ -29,6 +19,14 @@ import com.facebook.common.internal.VisibleForTesting;
 import com.facebook.common.logging.FLog;
 import com.facebook.common.memory.MemoryTrimType;
 import com.facebook.common.memory.MemoryTrimmableRegistry;
+import com.facebook.common.memory.Pool;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.concurrent.GuardedBy;
+import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * A base pool class that manages a pool of values (of type V). <p>
@@ -310,7 +308,7 @@ public abstract class BasePool<V> implements Pool<V> {
     final int bucketedSize = getBucketedSizeForValue(value);
     final int sizeInBytes = getSizeInBytes(bucketedSize);
     synchronized (this) {
-      final Bucket<V> bucket = getBucket(bucketedSize);
+      final Bucket<V> bucket = getBucketIfPresent(bucketedSize);
       if (!mInUseValues.remove(value)) {
         // This value was not 'known' to the pool (i.e.) allocated via the pool.
         // Something is going wrong, so let's free the value and report soft error.
@@ -597,6 +595,15 @@ public abstract class BasePool<V> implements Pool<V> {
     }
   }
 
+  /**
+   * Gets the freelist for the specified bucket if it exists.
+   *
+   * @param bucketedSize the bucket size
+   * @return the freelist for the bucket
+   */
+  private synchronized Bucket<V> getBucketIfPresent(int bucketedSize) {
+    return mBuckets.get(bucketedSize);
+  }
 
   /**
    * Gets the freelist for the specified bucket. Create the freelist if there isn't one
@@ -656,19 +663,19 @@ public abstract class BasePool<V> implements Pool<V> {
 
     // even with our best effort we cannot ensure hard cap limit.
     // Return immediately - no point in trimming any space
-    if ((mUsed.mNumBytes + sizeInBytes) > hardCap) {
+    if (sizeInBytes > hardCap - mUsed.mNumBytes) {
       mPoolStatsTracker.onHardCapReached();
       return false;
     }
 
     // trim if we need to
     int softCap = mPoolParams.maxSizeSoftCap;
-    if ((mUsed.mNumBytes + mFree.mNumBytes + sizeInBytes) > softCap) {
+    if (sizeInBytes > softCap - (mUsed.mNumBytes + mFree.mNumBytes)) {
       trimToSize(softCap - sizeInBytes);
     }
 
     // check again to see if we're below the hard cap
-    if (mUsed.mNumBytes + mFree.mNumBytes + sizeInBytes > hardCap) {
+    if (sizeInBytes > hardCap - (mUsed.mNumBytes + mFree.mNumBytes)) {
       mPoolStatsTracker.onHardCapReached();
       return false;
     }
@@ -725,7 +732,7 @@ public abstract class BasePool<V> implements Pool<V> {
   @NotThreadSafe
   @VisibleForTesting
   static class Counter {
-    private static final String TAG = "com.facebook.imagepipeline.common.BasePool.Counter";
+    private static final String TAG = "com.facebook.imagepipeline.memory.BasePool.Counter";
 
     int mCount;
     int mNumBytes;

@@ -10,24 +10,23 @@
 package com.facebook.imagepipeline.producers;
 
 import com.facebook.cache.common.CacheKey;
-import com.facebook.common.internal.VisibleForTesting;
+import com.facebook.common.references.CloseableReference;
 import com.facebook.imagepipeline.cache.CacheKeyFactory;
 import com.facebook.imagepipeline.cache.MemoryCache;
 import com.facebook.imagepipeline.image.CloseableImage;
-import com.facebook.common.references.CloseableReference;
 
 /**
  * Bitmap memory cache producer that is read-only.
  */
 public class BitmapMemoryCacheGetProducer extends BitmapMemoryCacheProducer {
 
-  @VisibleForTesting static final String PRODUCER_NAME = "BitmapMemoryCacheGetProducer";
+  public static final String PRODUCER_NAME = "BitmapMemoryCacheGetProducer";
 
   public BitmapMemoryCacheGetProducer(
       MemoryCache<CacheKey, CloseableImage> memoryCache,
       CacheKeyFactory cacheKeyFactory,
-      Producer<CloseableReference<CloseableImage>> nextProducer) {
-    super(memoryCache, cacheKeyFactory, nextProducer);
+      Producer<CloseableReference<CloseableImage>> inputProducer) {
+    super(memoryCache, cacheKeyFactory, inputProducer);
   }
 
   @Override

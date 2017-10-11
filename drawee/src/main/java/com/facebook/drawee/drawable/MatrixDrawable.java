@@ -13,7 +13,6 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-
 import com.facebook.common.internal.Preconditions;
 
 /**
@@ -41,6 +40,14 @@ public class MatrixDrawable extends ForwardingDrawable {
   public MatrixDrawable(Drawable drawable, Matrix matrix) {
     super(Preconditions.checkNotNull(drawable));
     mMatrix = matrix;
+  }
+
+  @Override
+  public Drawable setCurrent(Drawable newDelegate) {
+    final Drawable previousDelegate = super.setCurrent(newDelegate);
+    configureBounds();
+
+    return previousDelegate;
   }
 
   /**
